@@ -5,7 +5,8 @@ int L1 = A2;
 int L2 = 2;
 int L3 = 3;
 int Mpu;
-
+unsigned long timePrev;   //지난시간
+  
 Adafruit_MPU6050 mpu;
 
 void setup(void) {
@@ -50,21 +51,43 @@ void loop() {
   Serial.print("\tz: ");
   Serial.print(a.acceleration.z);
 
-  if(a.acceleration.y<=0.00&&a.acceleration.y>-7.00 ){
-    Serial.println("불 껴짐");
-    digitalWrite(L3,HIGH);
-    digitalWrite(L2,HIGH);
-    digitalWrite(L1,HIGH);
+  bool checkTimePrev = false;
+  while (a.acceleration.y <= -8.00 ){
+    if (checkTimePrev == false) {
+      timePrev = millis();
+      checkTimePrev = true;
+    }
+    unsigned long timeCurr = millis();    //현재 시간을 지정
+    if (timeCurr - timePrev > 5000){       //10초 동안 기울기 y<-8.00일 때
+      Serial.println("불 껴짐");
+      Serial.print("x: ");
+      Serial.print(a.acceleration.x);
+      Serial.print("\ty: ");
+      Serial.print(a.acceleration.y);
+      Serial.print("\tz: ");
+      Serial.print(a.acceleration.z);
+      Serial.print("\n");
+      digitalWrite(L3,HIGH);
+      digitalWrite(L2,HIGH);
+      digitalWrite(L1,HIGH);
+//  }
+    }
+    else {
+      Serial.println("불 안 켜짐");
+      Serial.print("x: ");
+      Serial.print(a.acceleration.x);
+      Serial.print("\ty: ");
+      Serial.print(a.acceleration.y);
+      Serial.print("\tz: ");
+      Serial.print(a.acceleration.z);
+      Serial.print("\n");
+      digitalWrite(L3,LOW);
+      digitalWrite(L2,LOW);
+      digitalWrite(L1,LOW);
+    }
+    delay(500);
   }
-  else {
-    Serial.println("불 꺼짐");
-    digitalWrite(L3,LOW);
-    digitalWrite(L2,LOW);
-    digitalWrite(L1,LOW);
-  }
- delay(1000);
 }
-
 
   
   
