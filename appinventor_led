@@ -1,0 +1,118 @@
+#include <Adafruit_MPU6050.h>
+#include <Adafruit_Sensor.h>
+#include <Wire.h>
+#include <SoftwareSerial.h>
+
+SoftwareSerial BT_serial(3,2);       //블루투스 Tx->3번핀, Rx->2번핀
+
+int L1 = 8;
+int L2 = 9;
+int L3 = 10;
+int Mpu;
+unsigned long timePrev;   //지난시간
+bool isLedOn = false; // LED 상태를 저장하는 변수
+  
+Adafruit_MPU6050 mpu;
+
+void setup(void) {
+  Serial.begin(9600);                    //PC와 연결
+  BT_serial.begin(9600);               //블루투스 연결
+  
+//  Serial.begin(115200);
+  if (!mpu.begin()){
+    Serial.println("Failed to find MPU6050 chip");
+    while(1){
+      delay(10);
+    }
+  }
+  Serial.println("MPU6050 Found!");
+
+  // set accelerometer range to +-8G
+  mpu.setAccelerometerRange(MPU6050_RANGE_8_G);
+
+  // set gyro range to +- 500 deg/s
+  mpu.setGyroRange(MPU6050_RANGE_500_DEG);
+
+  // set filter bandwidth to 21 Hz
+  mpu.setFilterBandwidth(MPU6050_BAND_21_HZ);
+  pinMode(L1, OUTPUT);
+  pinMode(L2, OUTPUT);
+  pinMode(L3, OUTPUT);
+  delay(100);
+}
+
+void loop() {
+  /* Get new sensor events with the readings */
+  sensors_event_t a, g, temp;
+  mpu.getEvent(&a, &g, &temp);
+
+   if(BT_serial.available())              //블루투스에서 신호가 있으면,
+    {
+      char toSend=(char)BT_serial.read();     //byte->char 강제 형변환
+
+      switch(toSend)
+      {
+        case '1':
+        isLedOn = true;
+        break;
+
+        case '0':
+        isLedOn = false;
+        Serial.println("신호 옴");
+        
+        break;
+      }
+    }
+
+  if (isLedOn) {
+    digitalWrite(L3, HIGH);
+    digitalWrite(L2, HIGH);
+    digitalWrite(L1, HIGH);
+  } else {
+    digitalWrite(L3, LOW);
+    digitalWrite(L2, LOW);
+    digitalWrite(L1, LOW);
+  }
+
+  Serial.print("x: ");
+  Serial.print(a.acceleration.x);
+  Serial.print("\ty: ");
+  Serial.print(a.acceleration.y);
+  Serial.print("\tz: ");
+  Serial.print(a.acceleration.z);
+  Serial.print("\n");
+  
+  bool checkTimePrev = false;
+   
+  while (a.acceleration.y <= -8.00 ){
+    if (checkTimePrev == false) {
+      timePrev = millis();
+      checkTimePrev = true;
+    }
+    unsigned long timeCurr = millis();    //현재 시간을 지정
+    if (timeCurr - timePrev > 5000){       //10초 동안 기울기 y<-8.00일 때
+      Serial.println("불 켜짐");
+      Serial.print("x: ");
+      Serial.print(a.acceleration.x);
+      Serial.print("\ty: ");
+      Serial.print(a.acceleration.y);
+      Serial.print("\tz: ");
+      Serial.print(a.acceleration.z);
+      Serial.print("\n");
+      isLedOn = true; // LED를 켜짐 상태로 변경
+      break;
+    }
+    else {
+      Serial.println("불 안 켜짐");
+      Serial.print("x: ");
+      Serial.print(a.acceleration.x);
+      Serial.print("\ty: ");
+      Serial.print(a.acceleration.y);
+      Serial.print("\tz: ");
+      Serial.print(a.acceleration.z);
+      Serial.print("\n");
+      isLedOn = false; // LED를 꺼짐 상태로 변경
+    }
+    delay(500);
+  }
+}
